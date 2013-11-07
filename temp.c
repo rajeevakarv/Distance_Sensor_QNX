@@ -26,7 +26,7 @@
 #define ENABLE_OUT 0x00
 
 #define LOW 0x00
-#define HIGH 0xFF
+#define HIGH 0x01
 
 int user_input = 1;
 uintptr_t ctrl_handle_portB;
@@ -74,21 +74,23 @@ main( )
 
     /* Initialize the DIO port */
     out8( ctrl_handle_portCTL, 0x10 );
-
    // loop until there is a key press to stop
     while(1){
-    	if (in8(ctrl_handle_portA))
+ /*   	out8( ctrl_handle_portB, HIGH );
+    	nanospin( &my_timer_value1 );
+    	out8( ctrl_handle_portB, LOW );
+    	nanospin( &my_timer_value2 );*/
+    	if (in8(ctrl_handle_portA) & 0x01)
     	{
        		start_time = clock();
        		printf("Sensor is sending something.\n");
     	}
-    	while(in8(ctrl_handle_portA)){
-    		// do nothing
+    	while(in8(ctrl_handle_portA) & 0x01){
+    		//printf("doing nothing\n");
     	}
     	end_time = clock();
     	printf("Time: %lu seconds\n", (end_time - start_time)/ CLOCKS_PER_SEC);
     }
-
     pthread_join( thread0, NULL);
     return 0;
 }
@@ -96,7 +98,7 @@ main( )
 
 void *pulse_to_sensor( void *ptr )
 {
-	  int privity_err;
+	int privity_err;
 	  printf("Pulse_Thread\n");
 	  privity_err = ThreadCtl( _NTO_TCTL_IO, NULL );
 	  if ( privity_err == -1 )
@@ -110,5 +112,6 @@ void *pulse_to_sensor( void *ptr )
 		  out8( ctrl_handle_portB, LOW );
 		  nanospin( &my_timer_value2 );
 	  }
+
 	  pthread_exit(NULL);
 }
