@@ -89,7 +89,7 @@ main( )
     		//printf("doing nothing\n");
     	}
     	end_time = clock();
-    	printf("end_Time: %lu and start_time: %lu and diff: %lu \n", end_time, start_time, (end_time-start_time));
+    	printf("end_Time: %lu and start_time: %lu and diff: %lu \n", end_time, start_time, ((end_time-start_time)/CLOCKS_PER_SEC));
     }
     pthread_join( thread0, NULL);
     return 0;
