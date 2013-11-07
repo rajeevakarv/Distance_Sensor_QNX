@@ -44,7 +44,7 @@ int
 main( )
 {
     int privity_err, timerThread;
-    double start_time, end_time;
+    long unsigned start_time = 0, end_time = 0;
     uintptr_t ctrl_handle_portA;
     uintptr_t ctrl_handle_portCTL;
 
@@ -83,13 +83,13 @@ main( )
     	if (in8(ctrl_handle_portA) & 0x01)
     	{
        		start_time = clock();
-       		printf("Sensor is sending something.\n");
+       		//printf("Sensor is sending something.\n");
     	}
     	while(in8(ctrl_handle_portA) & 0x01){
     		//printf("doing nothing\n");
     	}
     	end_time = clock();
-    	printf("Time: %lu seconds\n", (end_time - start_time)/ CLOCKS_PER_SEC);
+    	printf("end_Time: %lu and start_time: %lu and diff: %lu \n", end_time, start_time, (end_time-start_time));
     }
     pthread_join( thread0, NULL);
     return 0;
