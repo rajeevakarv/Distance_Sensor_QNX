@@ -62,8 +62,8 @@ int main( )
         my_timer_value1.tv_nsec = 1000;
         my_timer_value1.tv_sec = 0;
 
-        my_timer_value2.tv_nsec = 0;
-        my_timer_value2.tv_sec = 0.99999;
+        my_timer_value2.tv_nsec = 10000000;
+        my_timer_value2.tv_sec = 0;
 
     timerThread = pthread_create( &thread0, NULL, pulse_to_sensor, (void*) NULL);
     timerThread1 = pthread_create( &thread1, NULL, timer, (void*) NULL);
@@ -93,20 +93,20 @@ int main( )
         }
         while(in8(ctrl_handle_portA) & 0x01){
                 //printf("doing nothing\n");
-        		detect_flag = 0;
+                        detect_flag = 0;
         }
         end_time = timer_count;
         diff = end_time - start_time;
         if((diff<18000000 && diff>100) && (detect_flag == 0))
         {
-        	if(diff< min_distance)
-        		min_distance = diff;
-        	if(diff > max_distance)
-        		max_distance = diff;
+                if(diff< min_distance)
+                        min_distance = diff;
+                if(diff > max_distance)
+                        max_distance = diff;
             printf("Distance is : %f\n\r", (double)(SPEED_OF_LIGHT * diff/2));
         }
         else{
-//        	printf("#####\r");
+//                printf("#####\r");
         }
     }
     pthread_join( thread0, NULL);
