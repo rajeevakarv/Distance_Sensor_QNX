@@ -16,9 +16,9 @@
 #define PORT_LENGTH 1
 
 /*Digital input output port configuration,*/
-#define DIO_BASE_ADDR 0x280
-#define DIO_PORTA_ADDR 0x08
-#define DIO_PORTB_ADDR 0x09
+#define DIO_BASE_ADDR 0x280                //Base Address for Ports
+#define DIO_PORTA_ADDR 0x08				   //Base Address for Port_A
+#define DIO_PORTB_ADDR 0x09				   //Base Address for Port_B
 #define DIO_CTL_ADDR 0x0B
 #define MY_PULSE_CODE   _PULSE_CODE_MINAVAIL
 
@@ -27,7 +27,7 @@
 #define ENABLE_IN 0xFF
 #define ENABLE_OUT 0x00
 
-#define LOW 0x00
+#define LOW 0x00  					//Values to give pulse.
 #define HIGH 0x01
 #define SPEED_OF_LIGHT 11784.96    // speed of light in Inch per Micro seconds
 
@@ -35,15 +35,22 @@ int user_input = 0;
 int start_time = 0;
 int end_time = 0;
 int diff =0;
-double max_distance = 0, min_distance = 0;
-double distance;
-unsigned long timer_count =0;
+int first_reading = 0;
 
+double max_distance = 0, min_distance = 0;      //this will save the max and min distance
+double distance;
+
+unsigned long timer_count =0;                   //Variable to take care the time.
+
+/* Handlers for port-A and port-B */
 uintptr_t ctrl_handle_portA;
 uintptr_t ctrl_handle_portB;
+
+/*Structures for timers used.*/
 struct timespec my_timer_value1;
 struct timespec my_timer_value2;
 
+/*Threads functions.*/
 void *pulse_to_sensor( void *ptr );
 void *timer( void *ptr );
 void *sensor_output(void *ptr);
@@ -52,7 +59,6 @@ typedef union {
         struct _pulse   pulse;
 } my_message_t;  //This union is for timer module.
 
-/* ______________________________________________________________________ */
 int main( )
 {
 	fflush(stdout);
@@ -63,11 +69,10 @@ int main( )
     pthread_t thread0, thread1, thread2;
 
     //my_timer_value1.tv_nsec = 1000;
-        my_timer_value1.tv_nsec = 10000;
-        my_timer_value1.tv_sec = 0;
-
-        my_timer_value2.tv_nsec = 10000000;
-        my_timer_value2.tv_sec = 0;
+    my_timer_value1.tv_nsec = 10000;
+    my_timer_value1.tv_sec = 0;
+    my_timer_value2.tv_nsec = 10000000;
+    my_timer_value2.tv_sec = 0;
 
     /* Give this thread root permissions to access the hardware */
     privity_err = ThreadCtl( _NTO_TCTL_IO, NULL );
@@ -84,6 +89,7 @@ int main( )
 
     /* Initialize the DIO port */
     out8( ctrl_handle_portCTL, 0x10 );
+
     char c;
     printf("\nHey, \n s : Start the sensor and e : stop the sensor.\n Choose your option: ");
     while((c = getchar()) != EOF)
@@ -91,6 +97,7 @@ int main( )
     	if(c != '\n')
     	{
     		if ( c == 's' ){
+    		first_reading = 1;
     		user_input = 1;
     		printf("It's s;\n");
     		system("clear");
@@ -111,10 +118,6 @@ int main( )
     		pthread_join( thread2, NULL);
 
     	}
-    	/*else if (c == '\n'){
-    		//printf("That was shit\n");
-    		fflush(stdout);
-    	}*/
     	else{
     		printf("\nThat was wrong entry, please try again:\n");
     		printf("\ns : Start the sensor and e : stop the sensor.\n Choose your option: ");
@@ -123,37 +126,6 @@ int main( )
     	}
     	fflush(stdout);
     }
-#if 0
-    int detect_flag = 0;
-   // loop until there is a key press to stop
-    while(1){
-        if ((in8(ctrl_handle_portA) & 0x01) && detect_flag == 0)
-        {
-                start_time = timer_count;
-                detect_flag = 1;
-                //printf("Sensor is sending something.\n");
-        }
-        while(in8(ctrl_handle_portA) & 0x01){
-                //printf("doing nothing\n");
-                        detect_flag = 0;
-        }
-        end_time = timer_count;
-        diff = end_time - start_time;
-        if((diff<18000000 && diff>100) && (detect_flag == 0))
-        {
-                if(diff< min_distance)
-                        min_distance = diff;
-                if(diff > max_distance)
-                        max_distance = diff;
-            printf("Distance is : %f\n\r", (double)(SPEED_OF_LIGHT * diff/2));
-        }
-        else{
-//                printf("#####\r");
-        }
-    }
-#endif
-
-
     return 0;
 }
 
@@ -162,46 +134,52 @@ void *sensor_output( void *ptr )
 	//printf("sensor_output thread.\n");
 	int privity_err;
 	privity_err = ThreadCtl( _NTO_TCTL_IO, NULL );
-	        if ( privity_err == -1 )
-	        {
-	            fprintf( stderr, "can't get root permissions\n" );
-	            pthread_exit(NULL);
-	        }
+	if ( privity_err == -1 )
+	{
+		fprintf( stderr, "can't get root permissions\n" );
+	    pthread_exit(NULL);
+	}
 	int detect_flag = 0;
 	while(user_input){
-	        if ((in8(ctrl_handle_portA) & 0x01) && detect_flag == 0)
-	        {
-	                start_time = timer_count;
-	                detect_flag = 1;
-	                //printf("Sensor is sending something.\n");
-	        }
-	        while((in8(ctrl_handle_portA) & 0x01) && (user_input == 1)){
-	                //printf("doing nothing\n");
-	                        detect_flag = 0;
-	        }
-	        if(detect_flag == 0){
-	        	end_time = timer_count;
-	        	diff = end_time - start_time;
-	        	distance = (double)(SPEED_OF_LIGHT * diff/2);
-	        	if(distance < min_distance)
-                    min_distance = distance;
-	        	if(distance > max_distance)
-                    max_distance = distance;
-            //printf("timer: %u\n", timer_count);
-	        }
-	        if(timer_count % 1000 < 5){
-	        	//printf("I am here.\n");
-	        		if (diff<18000000 && diff>100)/* && (detect_flag == 0))*/
-	        		{
-	              	  	 printf("\r%f inches",distance );
-	              	  	 //system("clear");
-	              	  	 //printf("\r");
-	        		}
-	        		else{
-	                printf("\r############################");
-	        		}
-	        }
+		if ((in8(ctrl_handle_portA) & 0x01) && detect_flag == 0)
+	    {
+			start_time = timer_count;
+	        detect_flag = 1;
+	        //printf("Sensor is sending something.\n");
 	    }
+	    while((in8(ctrl_handle_portA) & 0x01) && (user_input == 1)){
+	    	//doing nothing.
+	        detect_flag = 0;
+	    }
+	    if(detect_flag == 0){
+	    	end_time = timer_count;
+	        diff = end_time - start_time;
+	        distance = (double)(SPEED_OF_LIGHT * diff/20000);
+	        if (first_reading)
+	        {
+	        	min_distance = distance;
+	        	max_distance = distance;
+	        	first_reading = 0;
+	        }
+	        if(distance < min_distance)
+	        	min_distance = distance;
+	        if(distance > max_distance)
+                max_distance = distance;
+            //printf("timer: %u\n", timer_count);
+	    }
+	    if(timer_count % 10 == 0){
+	    	//printf("I am here.\n");
+	        if (diff<18000000 && diff>100)/* && (detect_flag == 0))*/
+	        {
+	        	printf("\r%f inches",distance );
+	            //system("clear");
+	            //printf("\r");
+	        }
+	        else{
+	             printf("\r############################");
+	        }
+	     }
+	}
 	//printf("sensor_output: I am done.\n");
 	pthread_exit(NULL);
 }
@@ -242,7 +220,7 @@ void *timer( void *ptr )
 	   rcvid = MsgReceive(chid, &msg, sizeof(msg), NULL);
 	   timer_count++;
    }
-   //printf("\ntimer : Exiting\n");
+   //printf("\ntimer : Exiting\n");    //Debug log
    pthread_exit(NULL);
 }
 
@@ -263,6 +241,6 @@ void *pulse_to_sensor( void *ptr )
                 out8( ctrl_handle_portB, LOW );
                 nanospin( &my_timer_value2 );
         }
-        //printf("pulse_to_sensor: Exiting\n");
+        //printf("pulse_to_sensor: Exiting\n");    //Debug Log
         pthread_exit(NULL);
 }
